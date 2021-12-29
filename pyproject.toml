@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "psi-project"
+version = "0.1.0"
+description = ""
+authors = ["lorlen <filip.lew975@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+client = "psi_project.client"
+daemon = "psi_project.daemon"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
