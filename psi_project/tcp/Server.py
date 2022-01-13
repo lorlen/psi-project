@@ -1,6 +1,6 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
-from ..repo import FileManager
+from psi_project.repo import FileManager
 from pathlib import Path
 
 class Server:
@@ -12,8 +12,8 @@ class Server:
     
     async def handle(self, reader, writer):
         fileName = self.receiveMessage(reader, writer)
-        self.sendMessage(reader, writer)
-        self.sendFile(reader, writer, fileName)
+        await self.sendMessage(reader, writer)
+        await self.sendFile(reader, writer, fileName)
 
     def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> str:
         #decode message
@@ -48,6 +48,9 @@ class Server:
     def runServer(self):
         asyncio.run(self.serveServer())
 
+    def download(self, clinetIP: str, fileName: str):
+        asyncio.run(self.startDownload(clinetIP,  fileName))
+
     async def startDownload(self, clinetIP: str, fileName: str):
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
         self.sendMessage(reader, writer, fileName)
@@ -70,6 +73,3 @@ class Server:
 
         print('File message')
         writer.close()
-
-r = Server()
-r.runServer()
