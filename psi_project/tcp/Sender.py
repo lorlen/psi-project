@@ -12,6 +12,7 @@ async def tcp_echo_client(fileName):
 
     print(f'Send: ')
     writer.write(data)
+    await  writer.drain()
 
     print('Close the connection')
     writer.close()
