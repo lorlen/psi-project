@@ -64,10 +64,6 @@ def main(args: List[str] = None):
         server = loop.run_until_complete(start_interactive_server(make_cli, host, port))
         print_server(server, "command line interface")
     else:
-        asyncio.ensure_future(make_cli().interact())
+        loop.run_until_complete(make_cli().interact())
 
     # TODO: start the UDP server
-    try:
-        loop.run_forever()
-    except (KeyboardInterrupt, SystemExit):
-        pass
