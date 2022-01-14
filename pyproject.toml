@@ -6,12 +6,14 @@ authors = ["lorlen <filip.lew975@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+aioconsole = "^0.3.3"
 
 [tool.poetry.dev-dependencies]
+mypy = "^0.931"
+black = "^21.12b0"
 
 [tool.poetry.scripts]
-client = "psi_project.client"
-daemon = "psi_project.daemon"
+run = "psi_project:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
