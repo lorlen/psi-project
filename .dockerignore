@@ -1,0 +1,14 @@
+__pycache__/
+.mypy_cache/
+.venv/
+
+.vscode/
+.idea/
+
+.psi-repo/
+
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+README.md
