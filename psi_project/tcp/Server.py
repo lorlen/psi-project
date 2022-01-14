@@ -2,6 +2,8 @@ import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 from psi_project.repo import FileManager
 from pathlib import Path
+from psi_project.message import Message
+import psi_project.message as Msg
 
 class Server:
     def __init__(self, fp: FileManager):
@@ -9,15 +11,26 @@ class Server:
         # needs to be atomic ?
         self.count = 0 # count for temp files, for uniq file names
 
-    
+    #TODO: better infomation logging 
     async def handle(self, reader, writer):
-        fileName = self.receiveMessage(reader, writer)
-        await self.sendMessage(reader, writer)
-        await self.sendFile(reader, writer, fileName)
+        msg = self.receiveMessage(reader, writer)
 
-    def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> str:
-        #decode message
-        pass
+        if msg.status != Msg.START_DOWNLOADING:
+            returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
+            return
+        elif self.fp.file_exists(msg.details):
+            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, self.fp.get_file_metadata(msg.details))
+        else: 
+            returnMsg = Message(Msg.CONFIRMATION, Msg.FILE_NOT_FOUND, "NOT FOUND")
+        
+        await self.sendMessage(reader, writer, returnMsg)
+        await self.sendFile(reader, writer, msg.details)
+
+    async def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> Message:
+        data = await reader.read()
+        msg = Message.bytes_to_message(data)
+
+        return msg
 
     async def saveFile(self, reader: StreamReader, writer: StreamWriter):
         data = await reader.read()
@@ -53,13 +66,17 @@ class Server:
 
     async def startDownload(self, clinetIP: str, fileName: str):
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
+        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE, )
+
         self.sendMessage(reader, writer, fileName)
         self.saveFile(reader, writer)
 
 
-    async def sendMessage(self, reader: StreamReader, writer: StreamWriter):
-        #Send Message to start download, make it generic
-        pass
+    async def sendMessage(self, reader: StreamReader, writer: StreamWriter, msg: Message):
+        print(f'Sending Message')
+        msg.print_message()
+        writer.write(msg.message_to_bytes())
+        await  writer.drain()
 
     async def sendFile(self, reader: StreamReader, writer: StreamWriter, fileName: str):
         print(f'Started reading file for file: {fileName}')

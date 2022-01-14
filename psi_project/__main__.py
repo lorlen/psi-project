@@ -1,4 +1,4 @@
-from .tcp.Server import Server 
+from .tcp import Server 
 from .repo import FileManager
 
 fp = FileManager()

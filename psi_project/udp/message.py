@@ -1,5 +1,8 @@
 import struct
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#! copy of file, delete latter 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Define action constants.
 ASK_IF_FILE_EXISTS  = 10
