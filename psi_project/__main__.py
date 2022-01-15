@@ -1,7 +1,13 @@
+import asyncio
 from .tcp import Server 
 from .repo import FileManager
 
-fp = FileManager()
+async def run():
+    fp = FileManager()
+    s = Server(fp)
+    task = s.runServer()
 
-s = Server(fp)
-s.runServer()
+    await task
+
+
+asyncio.run(run()) 
