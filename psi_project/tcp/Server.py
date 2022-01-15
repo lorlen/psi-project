@@ -75,6 +75,11 @@ class Server:
         async with server:
             await server.serve_forever()
     
+    def serveServerLoop(self, loop):
+        server = asyncio.start_server(self.handle, '0.0.0.0', 8888)
+        loop.server = loop.run_until_complete(server)
+
+
     def runServer(self) -> Task:
         return asyncio.create_task(self.serveServer())
 

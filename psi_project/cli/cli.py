@@ -2,14 +2,17 @@ from argparse import ArgumentParser
 import asyncio
 from pathlib import Path
 from typing import List
+from psi_project.tcp import Server
+from psi_project.repo import FileManager
 
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
 
-from . import commands
+from .commands import Commands
+from psi_project.cli import commands
 
 
-def make_cli(streams=None):
+def make_cli(commands: Commands, streams=None):
     get_parser = ArgumentParser(description="Download a file onto the local filesystem")
     get_parser.add_argument("filename", help="filename to search for in the network")
     get_parser.add_argument(
@@ -54,16 +57,25 @@ def parse_args(args: List[str] = None):
     namespace = parser.parse_args(args)
     return parse_server(namespace.serve_cli) if namespace.serve_cli else None
 
-
-def main(args: List[str] = None):
+def mainProgram(args: List[str] = None):
     loop = asyncio.get_event_loop()
     serve_cli = parse_args(args)
+    fp = FileManager()
+    tcp = Server(fp)
+    commands = Commands(tcp, None)
+    tcp.serveServerLoop(loop)
 
     if serve_cli:
         host, port = serve_cli
         server = loop.run_until_complete(start_interactive_server(make_cli, host, port))
         print_server(server, "command line interface")
     else:
-        loop.run_until_complete(make_cli().interact())
+        loop.run_until_complete(make_cli(commands).interact())
 
     # TODO: start the UDP server
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+
+
