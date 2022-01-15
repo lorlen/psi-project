@@ -47,7 +47,7 @@ class Server:
 
     async def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> Message:
         #TODO maybey handle details length correctly
-        data = await reader.read(56)
+        data = await reader.read(48)
         print(data)
         msg = Message.bytes_to_message(data)
         msg.show_message()
@@ -60,7 +60,7 @@ class Server:
 
         print(f"Received  from {addr!r}")
 
-        fp = tempfile.TemporaryFile()
+        fp = tempfile.NamedTemporaryFile(delete=False)
         self.count += 1
 
         fp.write(data)

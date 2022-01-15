@@ -34,16 +34,16 @@ class Message():
         print('details: {}\n'.format(self.details))    
     
     def message_to_bytes(self):
-        return struct.pack('hhl40s', self.actionCode, self.status, self.detailsLength, bytes(self.details, 'utf-8'))    
+        return struct.pack('!hhl40s', self.actionCode, self.status, self.detailsLength, bytes(self.details, 'utf-8'))    
     
     @staticmethod
     def bytes_to_message(message):   
-        data = struct.unpack('hhl40s', message)
+        data = struct.unpack('!hhl40s', message)
         return Message(data[0], data[1], data[3].decode('utf-8').rstrip('\x00'))
     
     @staticmethod
     def print_message(message):
-        data = struct.unpack('hhl40s', message)
+        data = struct.unpack('!hhl40s', message)
         print('actionCode: {}'.format(data[0]))
         print('status: {}'.format(data[1]))
         print('detailsLength: {}'.format(data[2]))
