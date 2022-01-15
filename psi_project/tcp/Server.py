@@ -60,10 +60,9 @@ class Server:
 
         print(f"Received  from {addr!r}")
 
-        fp = tempfile.NamedTemporaryFile(delete=False)
-        self.count += 1
-
-        fp.write(data)
+        with tempfile.NamedTemporaryFile(delete=False) as fp:
+            self.count += 1
+            fp.write(data)
 
         self.fp.add_file(Path(fp.name), name=fileName, owner_address=addr[0])
         print(self.fp.list_files())

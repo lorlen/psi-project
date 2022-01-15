@@ -5,10 +5,10 @@ from typing import Optional
 from psi_project.repo import FileManager
 from psi_project.tcp import Server
 
-class Commands():
-    def __init__(self, TCPServer: Server, UDPServer) -> None:
-        self.tcp = TCPServer
-        self.udp = UDPServer
+class Commands:
+    def __init__(self, tcp_server: Server, udp_server) -> None:
+        self.tcp = tcp_server
+        self.udp = udp_server
 
     async def get(self, reader: StreamReader, writer: StreamWriter, filename: str, path: Path):
         manager = FileManager()
@@ -52,7 +52,7 @@ class Commands():
 
         for row in manager.list_files():
             text = row["name"] + (
-                f"(Owner: {row['owner_address']})" if row["owner_address"] else ""
+                f" (Owner: {row['owner_address']})" if row["owner_address"] else ""
             )
             writer.write((text + "\n").encode())
 
@@ -67,3 +67,13 @@ class Commands():
         # TODO: ask the network whether the file exists
 
         writer.write(f"File {filename} does not exist\n".encode())
+
+
+    async def rm(self, reader: StreamReader, writer: StreamWriter, filename: str):
+        manager = FileManager()
+
+        if not manager.file_exists(filename):
+            writer.write(f"File {filename} does not exist\n".encode())
+            return
+
+        manager.remove_file(filename)

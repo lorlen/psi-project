@@ -36,11 +36,17 @@ def make_cli(commands: Commands, streams=None):
     )
     exists_parser.add_argument("filename", help="filename to check existence of")
 
+    rm_parser = ArgumentParser(
+        description="Remove a file from the local repository"
+    )
+    rm_parser.add_argument("filename", help="file to remove")
+
     cmds = {
         "get": (commands.get, get_parser),
         "put": (commands.put, put_parser),
         "ls": (commands.ls, ls_parser),
         "exists": (commands.exists, exists_parser),
+        "rm": (commands.rm, rm_parser),
     }
 
     return AsynchronousCli(cmds, streams, prog="PSI Project")
@@ -73,9 +79,3 @@ def mainProgram(args: List[str] = None):
         loop.run_until_complete(make_cli(commands).interact())
 
     # TODO: start the UDP server
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-
-
