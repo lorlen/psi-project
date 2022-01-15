@@ -14,14 +14,13 @@ class Server:
 
     #TODO: better infomation logging 
     async def handle(self, reader, writer):
-        print(reader)
-        print(writer)
-        data = await reader.read()
         msg = await self.receiveMessage(reader, writer)
-        print(f"Received  from {addr!r}")
+        
         addr = writer.get_extra_info('peername')
+        print(f"Received  from {addr!r}")
         print("decing what to do with msg")
-        if msg.status != Msg.START_DOWNLOADING:
+
+        if msg.actionCode != Msg.START_DOWNLOADING:
             print(f"Bad req  from {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
             writer.close()
@@ -43,9 +42,9 @@ class Server:
         writer.close()
 
     async def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> Message:
-        print("diwnea rzecz")
-        data = await reader.read()
-        print(f"xdd")
+        #TODO maybey handle details length correctly
+        data = await reader.read(56)
+        print(data)
         msg = Message.bytes_to_message(data)
         msg.show_message()
 
@@ -63,7 +62,7 @@ class Server:
         with open(path, 'wb') as f:
             f.write(data)
 
-        self.fp.add_file(Path(path), addr)
+        self.fp.add_file(Path(path), addr[0])
 
     async def serveServer(self):
         server = await asyncio.start_server(self.handle, '0.0.0.0', 8888)
@@ -86,7 +85,7 @@ class Server:
 
         await self.sendMessage(reader, writer, msg)
         print("wating for return msg")
-        msg = await self.receiveMessage(reader, writer) # get filename 
+        await self.receiveMessage(reader, writer) # get filename 
         await self.saveFile(reader, writer, msg.details)
         print("Close the connection")
         writer.close()
@@ -95,7 +94,9 @@ class Server:
     async def sendMessage(self, reader: StreamReader, writer: StreamWriter, msg: Message):
         print(f'Sending Message')
         msg.show_message()
-        writer.write(msg.message_to_bytes())
+        data = msg.message_to_bytes()
+        print(data)
+        writer.write(data)
         await  writer.drain()
         print(f'Sent')
 
@@ -106,7 +107,7 @@ class Server:
                 data = f.read()
         else:
             data = self.fp.read_file(fileName)
-        self.send(reader, writer, data)
+        await self.send(reader, writer, data)
 
     async def send(self, reader: StreamReader, writer: StreamWriter, data: bytes):
         print(f'Sending: {len(data)}')
