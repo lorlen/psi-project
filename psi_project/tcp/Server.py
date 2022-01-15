@@ -11,6 +11,7 @@ class Server:
         self.fp = fp
         # needs to be atomic ?
         self.count = 0 # count for temp files, for uniq file names
+        print(self.fp.list_files())
 
     #TODO: better infomation logging 
     async def handle(self, reader, writer):
@@ -25,9 +26,9 @@ class Server:
             returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
             writer.close()
             return
-        elif msg.details == 'test':
-            print(f"Test  from {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, "XXXXX")
+        # elif msg.details == 'test':
+        #     print(f"Test  from {addr!r}")
+        #     returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, "XXXXX")
         elif self.fp.file_exists(msg.details):
             print(f"Sending file to  {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, self.fp.get_file_metadata(msg.details))
@@ -56,13 +57,14 @@ class Server:
 
         print(f"Received  from {addr!r}")
 
-        path = f"/var/tmp/received{self.count}.test"
+        path = f"/var/tmp/{fileName}"
         self.count += 1
 
         with open(path, 'wb') as f:
             f.write(data)
 
         self.fp.add_file(Path(path), addr[0])
+        print(self.fp.list_files())
 
     async def serveServer(self):
         server = await asyncio.start_server(self.handle, '0.0.0.0', 8888)
@@ -102,11 +104,11 @@ class Server:
 
     async def sendFile(self, reader: StreamReader, writer: StreamWriter, fileName: str):
         print(f'Started reading file for file: {fileName}')
-        if fileName == 'test':
-            with open('testFile.test', "rb") as f:
-                data = f.read()
-        else:
-            data = self.fp.read_file(fileName)
+        # if fileName == 'test':
+        #     with open('testFile.test', "rb") as f:
+        #         data = f.read()
+        # else:
+        data = self.fp.read_file(fileName)
         await self.send(reader, writer, data)
 
     async def send(self, reader: StreamReader, writer: StreamWriter, data: bytes):
