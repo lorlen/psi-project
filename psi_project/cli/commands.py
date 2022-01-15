@@ -20,7 +20,7 @@ class Commands():
         # TODO: download the file from the network
 
         # tcp download
-        self.tcp.startDownload("127.0.0.1", filename)
+        await self.tcp.startDownload("127.0.0.1", filename)
 
 
         writer.write(f"File {filename} does not exist\n".encode())

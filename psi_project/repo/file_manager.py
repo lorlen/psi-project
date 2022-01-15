@@ -96,7 +96,7 @@ class FileManager(metaclass=Singleton):
 
     def get_file_metadata(self, name: str):
         return self.db.execute(
-            "SELECT * FROM metadata WHERE name = ?", (name)
+            "SELECT * FROM metadata WHERE name = ?", (name,)
         ).fetchone()
 
     def file_exists(self, name: str):

@@ -31,7 +31,9 @@ class Server:
         #     returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, "XXXXX")
         elif self.fp.file_exists(msg.details):
             print(f"Sending file to  {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, self.fp.get_file_metadata(msg.details))
+            metaData = self.fp.get_file_metadata(msg.details)
+            list(metaData.keys())
+            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, )
         else: 
             print(f"File not found for  {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.FILE_NOT_FOUND, "NOT FOUND")
@@ -63,7 +65,7 @@ class Server:
         with open(path, 'wb') as f:
             f.write(data)
 
-        self.fp.add_file(Path(path), addr[0])
+        self.fp.add_file(Path(path), name=fileName, owner_address=addr[0])
         print(self.fp.list_files())
 
     async def serveServer(self):
