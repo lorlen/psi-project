@@ -82,7 +82,7 @@ class FileManager(metaclass=Singleton):
     def remove_file(self, name: str):
         name = self._sanitize_name(name)
         (config.FILE_DIR / name).unlink(missing_ok=True)
-        self.db.execute("DELETE FROM metadata WHERE name = ?", (name))
+        self.db.execute("DELETE FROM metadata WHERE name = ?", (name,))
         self.db.commit()
 
     def open_file(self, name: str):
@@ -96,7 +96,7 @@ class FileManager(metaclass=Singleton):
 
     def get_file_metadata(self, name: str):
         return self.db.execute(
-            "SELECT * FROM metadata WHERE name = ?", (name)
+            "SELECT * FROM metadata WHERE name = ?", (name,)
         ).fetchone()
 
     def file_exists(self, name: str):

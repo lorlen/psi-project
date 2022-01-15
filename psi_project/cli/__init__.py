@@ -1,1 +1,2 @@
-from .cli import main
+from .cli import mainProgram
+from .commands import Commands
