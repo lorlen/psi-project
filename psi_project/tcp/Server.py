@@ -5,6 +5,7 @@ from psi_project.repo import FileManager
 from pathlib import Path
 from psi_project.message import Message
 import psi_project.message as Msg
+import tempfile
 
 class Server:
     def __init__(self, fp: FileManager):
@@ -59,13 +60,12 @@ class Server:
 
         print(f"Received  from {addr!r}")
 
-        path = f"/var/tmp/{fileName}"
+        fp = tempfile.TemporaryFile()
         self.count += 1
 
-        with open(path, 'wb') as f:
-            f.write(data)
+        fp.write(data)
 
-        self.fp.add_file(Path(path), name=fileName, owner_address=addr[0])
+        self.fp.add_file(Path(fp.name), name=fileName, owner_address=addr[0])
         print(self.fp.list_files())
 
     async def serveServer(self):
