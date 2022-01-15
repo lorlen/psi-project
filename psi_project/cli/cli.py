@@ -6,7 +6,12 @@ from typing import List
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
 
+from psi_project.repo.file_manager import FileManager
+
 from . import commands
+
+from psi_project.udp import  UdpServer
+from psi_project.tcp import Server
 
 
 def make_cli(streams=None):
@@ -65,8 +70,17 @@ def main(args: List[str] = None):
         print_server(server, "command line interface")
     else:
         asyncio.ensure_future(make_cli().interact())
+        
+    # starting servers
+    udp_server = UdpServer()
+    asyncio.ensure_future(udp_server.serveServer(loop))
 
-    # TODO: start the UDP server
+    # I thought we should start server with every new udp message about download ...
+    manager = FileManager()
+    tcp_server = Server(manager)
+    asyncio.ensure_future(tcp_server.serveServer(loop))
+
+
     try:
         loop.run_forever()
     except (KeyboardInterrupt, SystemExit):

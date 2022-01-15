@@ -1,8 +1,12 @@
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
 from typing import Optional
+import asyncio
 
 from psi_project.repo import FileManager
+from psi_project.udp import Udp_Client
+from psi_project.udp.Udp_Client import UdpClient
+import psi_project.udp.Udp_Client
 
 
 async def get(reader: StreamReader, writer: StreamWriter, filename: str, path: Path):
@@ -55,5 +59,6 @@ async def exists(reader: StreamReader, writer: StreamWriter, filename: str):
         return
 
     # TODO: ask the network whether the file exists
+    await Udp_Client.check_file(filename)
 
     writer.write(f"File {filename} does not exist\n".encode())
