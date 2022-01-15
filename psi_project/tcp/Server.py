@@ -1,5 +1,6 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
+from asyncio.tasks import Task
 from psi_project.repo import FileManager
 from pathlib import Path
 from psi_project.message import Message
@@ -32,7 +33,7 @@ class Server:
 
         return msg
 
-    async def saveFile(self, reader: StreamReader, writer: StreamWriter):
+    async def saveFile(self, reader: StreamReader, writer: StreamWriter, fileName):
         data = await reader.read()
         addr = writer.get_extra_info('peername')
 
@@ -58,18 +59,19 @@ class Server:
         async with server:
             await server.serve_forever()
     
-    def runServer(self):
-        asyncio.run(self.serveServer())
+    def runServer(self) -> Task:
+        return asyncio.create_task(self.serveServer())
 
     def download(self, clinetIP: str, fileName: str):
         asyncio.run(self.startDownload(clinetIP,  fileName))
 
     async def startDownload(self, clinetIP: str, fileName: str):
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
-        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE, )
+        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE)
 
         self.sendMessage(reader, writer, fileName)
-        self.saveFile(reader, writer)
+        msg = self.receiveMessage(reader, writer) # get filename 
+        self.saveFile(reader, writer, msg.details)
 
 
     async def sendMessage(self, reader: StreamReader, writer: StreamWriter, msg: Message):
@@ -90,3 +92,5 @@ class Server:
 
         print('File message')
         writer.close()
+
+
