@@ -14,22 +14,40 @@ class Server:
 
     #TODO: better infomation logging 
     async def handle(self, reader, writer):
-        msg = self.receiveMessage(reader, writer)
-
+        print(reader)
+        print(writer)
+        data = await reader.read()
+        msg = await self.receiveMessage(reader, writer)
+        print(f"Received  from {addr!r}")
+        addr = writer.get_extra_info('peername')
+        print("decing what to do with msg")
         if msg.status != Msg.START_DOWNLOADING:
+            print(f"Bad req  from {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
+            writer.close()
             return
+        elif msg.details == 'test':
+            print(f"Test  from {addr!r}")
+            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, "XXXXX")
         elif self.fp.file_exists(msg.details):
+            print(f"Sending file to  {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, self.fp.get_file_metadata(msg.details))
         else: 
+            print(f"File not found for  {addr!r}")
             returnMsg = Message(Msg.CONFIRMATION, Msg.FILE_NOT_FOUND, "NOT FOUND")
+            writer.close()
+            return
         
         await self.sendMessage(reader, writer, returnMsg)
         await self.sendFile(reader, writer, msg.details)
+        writer.close()
 
     async def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> Message:
+        print("diwnea rzecz")
         data = await reader.read()
+        print(f"xdd")
         msg = Message.bytes_to_message(data)
+        msg.show_message()
 
         return msg
 
@@ -44,9 +62,6 @@ class Server:
 
         with open(path, 'wb') as f:
             f.write(data)
-    
-        print("Close the connection")
-        writer.close()
 
         self.fp.add_file(Path(path), addr)
 
@@ -67,22 +82,30 @@ class Server:
 
     async def startDownload(self, clinetIP: str, fileName: str):
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
-        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE)
+        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE, fileName)
 
-        self.sendMessage(reader, writer, fileName)
-        msg = self.receiveMessage(reader, writer) # get filename 
-        self.saveFile(reader, writer, msg.details)
+        await self.sendMessage(reader, writer, msg)
+        print("wating for return msg")
+        msg = await self.receiveMessage(reader, writer) # get filename 
+        await self.saveFile(reader, writer, msg.details)
+        print("Close the connection")
+        writer.close()
 
 
     async def sendMessage(self, reader: StreamReader, writer: StreamWriter, msg: Message):
         print(f'Sending Message')
-        msg.print_message()
+        msg.show_message()
         writer.write(msg.message_to_bytes())
         await  writer.drain()
+        print(f'Sent')
 
     async def sendFile(self, reader: StreamReader, writer: StreamWriter, fileName: str):
         print(f'Started reading file for file: {fileName}')
-        data = self.fp.read_file(fileName)
+        if fileName == 'test':
+            with open('testFile.test', "rb") as f:
+                data = f.read()
+        else:
+            data = self.fp.read_file(fileName)
         self.send(reader, writer, data)
 
     async def send(self, reader: StreamReader, writer: StreamWriter, data: bytes):
@@ -91,6 +114,5 @@ class Server:
         await  writer.drain()
 
         print('File message')
-        writer.close()
 
 

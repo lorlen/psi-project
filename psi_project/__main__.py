@@ -1,13 +1,20 @@
 import asyncio
 from .tcp import Server 
 from .repo import FileManager
+import sys
+
+fp = FileManager()
+s = Server(fp)
 
 async def run():
-    fp = FileManager()
-    s = Server(fp)
     task = s.runServer()
 
     await task
 
+def send():
+    asyncio.run(s.startDownload('127.0.0.1', 'test'))
 
-asyncio.run(run()) 
+if sys.argv[1] == 's':
+    asyncio.run(run())
+else:
+    send()
