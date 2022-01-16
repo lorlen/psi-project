@@ -3,6 +3,7 @@ import asyncio
 from pathlib import Path
 from typing import List
 from psi_project.tcp import Server
+from psi_project.udp import UdpServer
 from psi_project.repo import FileManager
 
 from aioconsole import AsynchronousCli, start_interactive_server
@@ -62,8 +63,10 @@ def mainProgram(args: List[str] = None):
     serve_cli = parse_args(args)
     fp = FileManager()
     tcp = Server(fp)
-    commands = Commands(tcp, None)
+    udp = UdpServer(loop, fp, tcp)
+    commands = Commands(tcp, udp)
     tcp.serveServerLoop(loop)
+    udp.serveServerLoop()
 
     if serve_cli:
         host, port = serve_cli
