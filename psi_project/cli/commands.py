@@ -22,9 +22,9 @@ class Commands:
             return
 
         # TODO: move this section to fetch() and call fetch() from here
-        # await self.udp.findFile(filename)
+        await self.udp.findFile(filename)
         # tcp download
-        await self.tcp.startDownload("127.0.0.1", filename)
+        # await self.tcp.startDownload("127.0.0.1", filename)
 
         # ======
 

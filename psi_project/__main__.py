@@ -1,5 +1,3 @@
-from . import mainProgram
-import asyncio
+from . import main
 
-def main():
-    asyncio.run(mainProgram())
+main()

@@ -80,7 +80,7 @@ async def cli_main(args: List[str] = None):
     fp = FileManager()
     tcp = Server(fp)
     udp = UdpServer(fp, tcp)
-    commands = Commands(fp, tcp, None)
+    commands = Commands(fp, tcp, udp)
 
     if serve_cli:
         host, port = serve_cli
