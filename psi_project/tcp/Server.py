@@ -3,8 +3,7 @@ from asyncio.streams import StreamReader, StreamWriter
 from asyncio.tasks import Task
 from psi_project.repo import FileManager
 from pathlib import Path
-from psi_project.message import Message
-import psi_project.message as Msg
+from psi_project.core.message import ActionCode, StatusCode, Message
 import tempfile
 
 class Server:
@@ -23,9 +22,9 @@ class Server:
         print(f"Received  from {addr!r}")
         print("decing what to do with msg")
 
-        if msg.actionCode != Msg.START_DOWNLOADING:
+        if msg.actionCode != ActionCode.START_DOWNLOADING:
             print(f"Bad req  from {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.BAD_REQUEST, None, "BAD ACTION")
             writer.close()
             return
         # elif msg.details == 'test':
@@ -35,10 +34,10 @@ class Server:
             print(f"Sending file to  {addr!r}")
             metaData = self.fp.get_file_metadata(msg.details)
             list(metaData.keys())
-            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, )
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.ACCEPT, None)
         else: 
             print(f"File not found for  {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.FILE_NOT_FOUND, "NOT FOUND")
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.FILE_NOT_FOUND, None, "NOT FOUND")
             writer.close()
             return
         
@@ -90,7 +89,7 @@ class Server:
 
     async def startDownload(self, clinetIP: str, fileName: str):
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
-        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE, fileName)
+        msg = Message(ActionCode.START_DOWNLOADING, StatusCode.NOT_APPLICABLE, None, fileName)
 
         await self.sendMessage(reader, writer, msg)
         print("wating for return msg")

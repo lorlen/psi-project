@@ -4,11 +4,12 @@ from typing import Optional
 
 from psi_project.repo import FileManager
 from psi_project.tcp import Server
+from psi_project.udp import UdpServer
 
 
 class Commands:
     def __init__(
-        self, manager: FileManager, tcp_server: Server, udp_server=None
+        self, manager: FileManager, tcp_server: Server, udp_server: UdpServer
     ) -> None:
         self.mgr = manager
         self.tcp = tcp_server

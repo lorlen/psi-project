@@ -96,11 +96,3 @@ async def cli_main(args: List[str] = None):
     udp_task = udp.runServer()
 
     await asyncio.gather(cli_task, tcp_task, udp_task, return_exceptions=True)
-
-    # TODO: start the UDP server
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-
-

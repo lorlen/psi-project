@@ -1,10 +1,8 @@
-import socket
 import asyncio
-from asyncio.tasks import Task
-from psi_project.repo import FileManager
-from psi_project.message import Message
-import psi_project.message as Msg
+import socket
 
+from psi_project.repo import FileManager
+from psi_project.core.message import ActionCode, StatusCode, Message
 
 
 class UdpServer:
@@ -16,19 +14,19 @@ class UdpServer:
     
     def handle(self, message: Message, addr):
         print("Handling")
-        if message.actionCode == Msg.ASK_IF_FILE_EXISTS:
+        if message.actionCode == ActionCode.ASK_IF_FILE_EXISTS:
             print("Checking for file: {}".format(message.details))
             if self.fp.file_exists(message.details):
                 
-                return Msg.Message(Msg.ANSWER_FILE_EXISTS, Msg.FILE_EXISTS, message.details)
+                return Message(ActionCode.ANSWER_FILE_EXISTS, StatusCode.FILE_EXISTS, None, message.details)
             else:
                 
-                return Msg.Message(Msg.ANSWER_FILE_EXISTS, Msg.FILE_NOT_FOUND, message.details)
+                return Message(ActionCode.ANSWER_FILE_EXISTS, StatusCode.FILE_NOT_FOUND, None, message.details)
 
-        if message.actionCode == Msg.ANSWER_FILE_EXISTS:
+        if message.actionCode == ActionCode.ANSWER_FILE_EXISTS:
             print("file exists check")
 
-            if message.status == Msg.FILE_EXISTS:
+            if message.status == StatusCode.FILE_EXISTS:
                 print(f"file {message.details} exists at {addr}")
                 self.fileLocation = addr
                 asyncio.create_task(self.tcp.startDownload(addr[0], message.details))
@@ -36,6 +34,10 @@ class UdpServer:
             else :
                 print(f"file not exists at {addr}")
                 return
+
+        elif message.actionCode == ActionCode.REVOKE:
+            # TODO
+            pass
 
     def connection_made(self, transport):
         print("Connection Made")
@@ -46,7 +48,7 @@ class UdpServer:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     def datagram_received(self, data, addr):
-        received_message = Msg.Message.bytes_to_message(data)
+        received_message = Message.bytes_to_message(data)
         # received_message.show_message()
         # 
         # answer = self.loop.create_task(self.handle(received_message, addr))        
@@ -57,11 +59,12 @@ class UdpServer:
             self.transport.sendto(answer.message_to_bytes(), addr)
 
     async def findFile(self, filename):
-        message = Msg.Message(Msg.ASK_IF_FILE_EXISTS, Msg.NOT_APPLICABLE, filename)
+        message = Message(ActionCode.ASK_IF_FILE_EXISTS, StatusCode.NOT_APPLICABLE, None, filename)
         self.transport.sendto(message.message_to_bytes(), ('<broadcast>', 9000))
 
     async def revokeFile(self, filename):
-        pass
+        message = Message(ActionCode.REVOKE, StatusCode.NOT_APPLICABLE, None, filename)
+        self.transport.sendto(message.message_to_bytes(), ("<broadcast>", 9000))
 
     def serveServerLoop(self):
         server = self.loop.create_datagram_endpoint(
