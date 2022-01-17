@@ -8,8 +8,7 @@ import psi_project.message as Msg
 
 
 class UdpServer:
-    def __init__(self, loop: asyncio.AbstractEventLoop, fp: FileManager, tcp):
-        self.loop = loop
+    def __init__(self, fp: FileManager, tcp):
         self.fp = fp
         self.tcp = tcp
         self.fileLocation = None
@@ -69,3 +68,14 @@ class UdpServer:
             lambda: self, local_addr=('0.0.0.0', 9000)
         )
         self.loop.server = self.loop.run_until_complete(server)
+
+    def runServer(self):
+        return asyncio.create_task(self.serveServer())
+
+    async def serveServer(self):
+        loop = asyncio.get_event_loop()
+        # print("hallo")
+        server = await loop.create_datagram_endpoint(
+            lambda: self, local_addr=('0.0.0.0', 9000)
+        )
+        

@@ -1,6 +1,8 @@
-from .cli import mainProgram
 import asyncio
 
-def main():
-    asyncio.run(mainProgram())
+from .cli import cli_main
 
+def main():
+    asyncio.run(cli_main())
+
+main()
