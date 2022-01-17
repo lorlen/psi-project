@@ -9,6 +9,7 @@ import tempfile
 
 class Server:
     def __init__(self, fp: FileManager):
+        print("started TCP Server")
         self.fp = fp
         # needs to be atomic ?
         self.count = 0 # count for temp files, for uniq file names

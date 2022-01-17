@@ -4,6 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import List
 from psi_project.tcp import Server
+from psi_project.udp import UdpServer
 from psi_project.repo import FileManager
 
 from aioconsole import AsynchronousCli, start_interactive_server
@@ -78,7 +79,8 @@ async def cli_main(args: List[str] = None):
     serve_cli = parse_args(args)
     fp = FileManager()
     tcp = Server(fp)
-    commands = Commands(fp, tcp, None)
+    udp = UdpServer(fp, tcp)
+    commands = Commands(fp, tcp, udp)
 
     if serve_cli:
         host, port = serve_cli
@@ -91,7 +93,14 @@ async def cli_main(args: List[str] = None):
         cli_task = asyncio.create_task(make_cli(commands).interact())
 
     tcp_task = tcp.runServer()
+    udp_task = udp.runServer()
 
-    await asyncio.gather(cli_task, tcp_task, return_exceptions=True)
+    await asyncio.gather(cli_task, tcp_task, udp_task, return_exceptions=True)
 
     # TODO: start the UDP server
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+
+
