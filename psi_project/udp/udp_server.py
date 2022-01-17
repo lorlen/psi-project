@@ -30,7 +30,6 @@ class EchoServerProtocol:
             answer_message = msg.Message(msg.ANSWER_FILE_EXISTS, msg.FILE_EXISTS, received_message.details)
         else:
             answer_message = msg.Message(msg.ANSWER_FILE_EXISTS, msg.FILE_NOT_FOUND, received_message.details)
-        )
         self.transport.sendto(answer_message.message_to_bytes(), addr)
 
 
