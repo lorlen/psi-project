@@ -29,7 +29,7 @@ class UdpServer:
         elif message.actionCode == ActionCode.ANSWER_FILE_EXISTS:
             if message.status == StatusCode.FILE_EXISTS and message.details in self.file_exists_futures:
                 logging.debug(f"Finishing future {message.details}")
-                self.file_exists_futures[message.details].set_result(addr)
+                self.file_exists_futures[message.details].set_result(addr[0])
 
         elif message.actionCode == ActionCode.REVOKE:
             if message.details in self.tcp.running_tasks:
