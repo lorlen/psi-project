@@ -1,15 +1,18 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio.tasks import Task
-from psi_project.repo import FileManager
 from pathlib import Path
-from psi_project.core.message import ActionCode, StatusCode, Message
 import tempfile
+from typing import Dict
 
-class Server:
+from psi_project.core.message import ActionCode, StatusCode, Message
+from psi_project.repo import FileManager
+
+class TcpServer:
     def __init__(self, fp: FileManager):
         print("started TCP Server")
         self.fp = fp
+        self.running_tasks: Dict[str, Task] = {}
         # needs to be atomic ?
         self.count = 0 # count for temp files, for uniq file names
         print(self.fp.list_files())
@@ -115,7 +118,10 @@ class Server:
         #         data = f.read()
         # else:
         data = self.fp.read_file(fileName)
-        await self.send(reader, writer, data)
+        upload_task = asyncio.create_task(self.send(reader, writer, data))
+        self.running_tasks[fileName] = upload_task
+        await upload_task
+        del self.running_tasks[fileName]
 
     async def send(self, reader: StreamReader, writer: StreamWriter, data: bytes):
         print(f'Sending: {len(data)}')
@@ -123,5 +129,3 @@ class Server:
         await  writer.drain()
 
         print('File message')
-
-

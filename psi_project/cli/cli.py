@@ -3,7 +3,7 @@ import asyncio
 from functools import partial
 from pathlib import Path
 from typing import List
-from psi_project.tcp import Server
+from psi_project.tcp import TcpServer
 from psi_project.udp import UdpServer
 from psi_project.repo import FileManager
 
@@ -78,7 +78,7 @@ def parse_args(args: List[str] = None):
 async def cli_main(args: List[str] = None):
     serve_cli = parse_args(args)
     fp = FileManager()
-    tcp = Server(fp)
+    tcp = TcpServer(fp)
     udp = UdpServer(fp, tcp)
     commands = Commands(fp, tcp, udp)
 

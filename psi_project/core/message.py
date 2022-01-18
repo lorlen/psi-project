@@ -50,18 +50,18 @@ class Message:
 
     
     def show_message(self):
-        print('actionCode: {}'.format(self.actionCode))
-        print('status: {}'.format(self.status))
+        print('actionCode: {}'.format(self.actionCode.name))
+        print('status: {}'.format(self.status.name))
         print('owner_address: {}'.format(self.owner_address))
         print('detailsLength: {}'.format(self.detailsLength))
         print('details: {}\n'.format(self.details))    
     
     def message_to_bytes(self):
         return self.struct_def.pack(
-            self.actionCode,
-            self.status,
+            self.actionCode.value,
+            self.status.value,
             self.address_kind,
-            self.owner_address.packed,
+            self.owner_address.packed.ljust(16, b"\0"),
             self.detailsLength,
             self.details.encode('utf-8'),
         )    
@@ -71,13 +71,13 @@ class Message:
         data = Message.struct_def.unpack(message)
         
         if IPAddrKind(data[2]) == IPAddrKind.IPv4:
-            addr = IPv4Address(data[3])
+            addr = IPv4Address(data[3][:4])
         elif IPAddrKind(data[2]) == IPAddrKind.IPv6:
             addr = IPv6Address(data[3])
         else:
             addr = None
 
-        return Message(data[0], data[1], addr, data[5].decode('utf-8').rstrip('\x00'))
+        return Message(ActionCode(data[0]), StatusCode(data[1]), addr, data[5].decode('utf-8').rstrip('\x00'))
     
     @staticmethod
     def print_message(message):

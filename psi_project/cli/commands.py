@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import Optional
 
 from psi_project.repo import FileManager
-from psi_project.tcp import Server
+from psi_project.tcp import TcpServer
 from psi_project.udp import UdpServer
 
 
 class Commands:
     def __init__(
-        self, manager: FileManager, tcp_server: Server, udp_server: UdpServer
+        self, manager: FileManager, tcp_server: TcpServer, udp_server: UdpServer
     ) -> None:
         self.mgr = manager
         self.tcp = tcp_server
@@ -61,7 +61,11 @@ class Commands:
             writer.write(f"File {filename} exists in the local repository\n".encode())
             return
 
-        # TODO: ask the network whether the file exists
+        addr = self.udp.findFile(filename)
+
+        if addr:
+            writer.write(f"File {filename} exists on host {addr}\n".encode())
+            return
 
         writer.write(f"File {filename} does not exist\n".encode())
 
@@ -75,6 +79,9 @@ class Commands:
         if not self.mgr.file_exists(filename):
             writer.write(f"File {filename} does not exist\n".encode())
             return
+
+        if revoke:
+            await self.udp.revokeFile(filename)
 
         self.mgr.remove_file(filename)
 
