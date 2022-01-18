@@ -1,12 +1,14 @@
 from argparse import ArgumentParser
 import asyncio
+import atexit
 from functools import partial
+import logging
 from pathlib import Path
 from typing import List
 from psi_project.tcp import TcpServer
 from psi_project.udp import UdpServer, serveUdpServer
 from psi_project.repo import FileManager
-import logging
+
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
 
@@ -78,11 +80,14 @@ def parse_args(args: List[str] = None):
 
 async def cli_main(args: List[str] = None):
     logging.basicConfig(
-        filename='psi-project.log',
-        filemode='a',
-        encoding='utf-8',
-        level=logging.DEBUG
+        filename="psi-project.log",
+        filemode="a",
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+        encoding="utf-8",
+        level=logging.DEBUG,
     )
+    atexit.register(lambda: logging.info("Exiting the program\n"))
+
     serve_cli = parse_args(args)
     fp = FileManager()
     tcp = TcpServer(fp)
