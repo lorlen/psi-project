@@ -4,7 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import List
 from psi_project.tcp import TcpServer
-from psi_project.udp import UdpServer
+from psi_project.udp import UdpServer, serveUdpServer
 from psi_project.repo import FileManager
 import logging
 from aioconsole import AsynchronousCli, start_interactive_server
@@ -77,7 +77,12 @@ def parse_args(args: List[str] = None):
 
 
 async def cli_main(args: List[str] = None):
-    logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+    logging.basicConfig(
+        filename='psi-project.log',
+        filemode='a',
+        encoding='utf-8',
+        level=logging.DEBUG
+    )
     serve_cli = parse_args(args)
     fp = FileManager()
     tcp = TcpServer(fp)
@@ -97,7 +102,7 @@ async def cli_main(args: List[str] = None):
     logging.info("Cli started")
 
     tcp_task = tcp.runServer()
-    udp_task = udp.runServer()
+    udp_task = asyncio.create_task(serveUdpServer(udp))
 
     await asyncio.gather(cli_task, tcp_task, udp_task, return_exceptions=True)
 

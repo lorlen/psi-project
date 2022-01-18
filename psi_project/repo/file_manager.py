@@ -1,10 +1,11 @@
 import atexit
 from hashlib import sha256
+from ipaddress import IPv4Address, IPv6Address
 import os
 from pathlib import Path
 import shutil
 import sqlite3
-from typing import Optional
+from typing import Optional, Union
 import logging
 
 from psi_project.core import config
@@ -56,9 +57,9 @@ class FileManager(metaclass=Singleton):
         self,
         path: Path,
         name: Optional[str] = None,
-        owner_address: Optional[str] = None,
+        owner_address: Optional[Union[str, IPv4Address, IPv6Address]] = None,
     ):
-        logging.trace(f"starting adding file: name: {name}, path: {path}")
+        logging.debug(f"starting adding file: name: {name}, path: {path}")
         name = self._sanitize_name(name) or path.name
 
         if (config.FILE_DIR / name).exists():
@@ -69,7 +70,7 @@ class FileManager(metaclass=Singleton):
         shutil.copy(path, config.FILE_DIR / name)
         self.db.execute(
             "INSERT INTO metadata VALUES (?,?,?)",
-            (name, sha256(path.read_bytes()).hexdigest(), owner_address),
+            (name, sha256(path.read_bytes()).hexdigest(), str(owner_address) if owner_address else None),
         )
         self.db.commit()
 
@@ -81,7 +82,7 @@ class FileManager(metaclass=Singleton):
 
         if path.is_dir():
             path /= name
-            logging.trace(f"Path: {path} was a dir")
+            logging.debug(f"Path: {path} was a dir")
 
         if not (config.FILE_DIR / name).exists():
             raise ValueError("File does not exist in the repository")

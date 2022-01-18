@@ -57,18 +57,20 @@ class Message:
         print('details: {}\n'.format(self.details))    
     
     def __str__(self) -> str:
-        return "".join('actionCode: {}\n'.format(self.actionCode.name),
-        'status: {}\n'.format(self.status.name),
-        'owner_address: {}\n'.format(self.owner_address),
-        'detailsLength: {}\n'.format(self.detailsLength),
-        'details: {}\n'.format(self.details))    
+        return "".join([
+            'actionCode: {}\n'.format(self.actionCode.name),
+            'status: {}\n'.format(self.status.name),
+            'owner_address: {}\n'.format(self.owner_address),
+            'detailsLength: {}\n'.format(self.detailsLength),
+            'details: {}\n'.format(self.details)
+        ])
 
     def message_to_bytes(self):
         return self.struct_def.pack(
             self.actionCode.value,
             self.status.value,
-            self.address_kind,
-            self.owner_address.packed.ljust(16, b"\0"),
+            self.address_kind.value,
+            self.owner_address.packed.ljust(16, b"\0") if self.owner_address else b"\0" * 16,
             self.detailsLength,
             self.details.encode('utf-8'),
         )    

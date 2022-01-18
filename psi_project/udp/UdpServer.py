@@ -8,7 +8,7 @@ from psi_project.repo import FileManager
 from psi_project.tcp import TcpServer
 
 
-class UdpServer(asyncio.DatagramProtocol):
+class UdpServer:
     def __init__(self, fp: FileManager, tcp: TcpServer):
         self.fp = fp
         self.tcp = tcp
@@ -43,15 +43,6 @@ class UdpServer(asyncio.DatagramProtocol):
         logging.info(f"Future done, removing file: {message.details}")
         self.fp.remove_file(message.details)
 
-    def connection_made(self, transport):
-        logging.info(f"Connection made: {transport}")
-
-        self.transport = transport
-
-        sock = transport.get_extra_info("socket")
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
     def datagram_received(self, data, addr):
         logging.info(f"Received datagram: {data} from {addr}")
         
@@ -60,7 +51,7 @@ class UdpServer(asyncio.DatagramProtocol):
 
         answer = self.handle(received_message, addr)
 
-        logging.trace(f"Answer after handling {answer}")
+        logging.debug(f"Answer after handling {answer}")
         if answer:
             answer.show_message()
             logging.info(f"Sending return message {answer} to {addr}")
@@ -89,12 +80,29 @@ class UdpServer(asyncio.DatagramProtocol):
         message = Message(ActionCode.REVOKE, StatusCode.NOT_APPLICABLE, None, filename)
         self.transport.sendto(message.message_to_bytes(), ("<broadcast>", 9000))
 
-    def runServer(self):
-        return asyncio.create_task(self.serveServer())
 
-    async def serveServer(self):
-        loop = asyncio.get_event_loop()
-        server = await loop.create_datagram_endpoint(
-            UdpServer, local_addr=('0.0.0.0', 9000)
-        )
+class UdpProtocol(asyncio.DatagramProtocol):
+    def __init__(self, server: UdpServer) -> None:
+        self.server = server
+
+    def connection_made(self, transport):
+        pass
+
+    def connection_lost(self, transport):
+        pass
+
+    def datagram_received(self, data, addr):
+        self.server.datagram_received(data, addr)
+
+
+async def serveUdpServer(server: UdpServer):
+    loop = asyncio.get_event_loop()
+    transport, protocol = await loop.create_datagram_endpoint(
+        lambda: UdpProtocol(server), local_addr=('0.0.0.0', 9000)
+    )
+
+    server.transport = transport
+    sock = transport.get_extra_info("socket")
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         

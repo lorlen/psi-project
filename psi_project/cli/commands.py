@@ -23,14 +23,13 @@ class Commands:
             self.mgr.retrieve_file(filename, path)
             return
 
-        # TODO: move this section to fetch() and call fetch() from here
-        await self.udp.findFile(filename)
-        # tcp download
-        # await self.tcp.startDownload("127.0.0.1", filename)
+        addr = await self.udp.findFile(filename)
 
-        # ======
-
-        writer.write(f"File {filename} does not exist\n".encode())
+        if addr:
+            await self.tcp.startDownload(addr, filename)
+            self.mgr.retrieve_file(filename, path)
+        else:
+            writer.write(f"File {filename} does not exist".encode())
 
     async def put(
         self,
@@ -62,13 +61,12 @@ class Commands:
             writer.write(f"File {filename} exists in the local repository\n".encode())
             return
 
-        addr = self.udp.findFile(filename)
+        addr = await self.udp.findFile(filename)
 
         if addr:
             writer.write(f"File {filename} exists on host {addr}\n".encode())
-            return
-
-        writer.write(f"File {filename} does not exist\n".encode())
+        else:
+            writer.write(f"File {filename} does not exist\n".encode())
 
     async def rm(
         self,
@@ -87,5 +85,12 @@ class Commands:
         self.mgr.remove_file(filename)
 
     async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
-        # TODO: download the file from the network
-        raise NotImplementedError()
+        addr = await self.udp.findFile(filename)
+
+        if addr:
+            await self.tcp.startDownload(addr, filename)
+            writer.write(f"Successfully fetched file {filename}\n".encode())
+        else:
+            writer.write(f"File {filename} does not exist\n".encode())
+
+        
