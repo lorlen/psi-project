@@ -1,85 +1,74 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio.tasks import Task
-from psi_project.repo import FileManager
 from pathlib import Path
-from psi_project.message import Message
-import psi_project.message as Msg
 import tempfile
+from typing import Dict
+import logging
 
-class Server:
+from psi_project.core.message import ActionCode, StatusCode, Message
+from psi_project.repo import FileManager
+
+class TcpServer:
     def __init__(self, fp: FileManager):
-        print("started TCP Server")
         self.fp = fp
-        # needs to be atomic ?
-        self.count = 0 # count for temp files, for uniq file names
-        print(self.fp.list_files())
+        self.running_tasks: Dict[str, Task] = {}
+        logging.info("Started TCP Server")
+
 
     #TODO: better infomation logging 
     async def handle(self, reader, writer):
         msg = await self.receiveMessage(reader, writer)
         
         addr = writer.get_extra_info('peername')
-        print(f"Received  from {addr!r}")
-        print("decing what to do with msg")
+        logging.info(f"Received  from {addr!r}")
+        logging.debug("decing what to do with msg")
 
-        if msg.actionCode != Msg.START_DOWNLOADING:
-            print(f"Bad req  from {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.BAD_REQUEST, "BAD ACTION")
-            writer.close()
-            return
-        # elif msg.details == 'test':
-        #     print(f"Test  from {addr!r}")
-        #     returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, "XXXXX")
+        if msg.actionCode != ActionCode.START_DOWNLOADING:
+            logging.info(f"Bad req  from {addr!r}")
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.BAD_REQUEST, None, "BAD ACTION")
+            await self.sendMessage(reader, writer, returnMsg)
         elif self.fp.file_exists(msg.details):
-            print(f"Sending file to  {addr!r}")
-            metaData = self.fp.get_file_metadata(msg.details)
-            list(metaData.keys())
-            returnMsg = Message(Msg.CONFIRMATION, Msg.ACCEPT, )
+            logging.info(f"Sending file to  {addr!r}")
+            addr = self.fp.get_file_metadata(msg.details)["owner_address"]
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.ACCEPT, addr, msg.details)
+            await self.sendMessage(reader, writer, returnMsg)
+            await self.sendFile(reader, writer, msg.details)
         else: 
-            print(f"File not found for  {addr!r}")
-            returnMsg = Message(Msg.CONFIRMATION, Msg.FILE_NOT_FOUND, "NOT FOUND")
-            writer.close()
-            return
-        
-        await self.sendMessage(reader, writer, returnMsg)
-        await self.sendFile(reader, writer, msg.details)
+            logging.info(f"File not found for  {addr!r}")
+            returnMsg = Message(ActionCode.CONFIRMATION, StatusCode.FILE_NOT_FOUND, None, msg.details)
+            await self.sendMessage(reader, writer, returnMsg)
+
         writer.close()
 
     async def receiveMessage(self, reader: StreamReader, writer: StreamWriter) -> Message:
         #TODO maybey handle details length correctly
-        data = await reader.read(48)
-        print(data)
+        data = await reader.read(Message.struct_def.size)
+        logging.debug(f"Received msg data {data} ")
         msg = Message.bytes_to_message(data)
-        msg.show_message()
+        logging.debug(f"Received msg {data} ")
 
         return msg
 
-    async def saveFile(self, reader: StreamReader, writer: StreamWriter, fileName):
+    async def saveFile(self, reader: StreamReader, writer: StreamWriter, msg: Message):
         data = await reader.read()
         addr = writer.get_extra_info('peername')
 
-        print(f"Received  from {addr!r}")
+        logging.info(f"Saving file: {msg.details} from {addr!r}")
 
         with tempfile.NamedTemporaryFile(delete=False) as fp:
-            self.count += 1
             fp.write(data)
 
-        self.fp.add_file(Path(fp.name), name=fileName, owner_address=addr[0])
-        print(self.fp.list_files())
+        self.fp.add_file(Path(fp.name), name=msg.details, owner_address=msg.owner_address)
 
     async def serveServer(self):
         server = await asyncio.start_server(self.handle, '0.0.0.0', 8888)
 
         addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
-        print(f'Serving on {addrs}')
+        logging.info(f'Serving on {addrs}')
 
         async with server:
             await server.serve_forever()
-    
-    def serveServerLoop(self, loop):
-        server = asyncio.start_server(self.handle, '0.0.0.0', 8888)
-        loop.server = loop.run_until_complete(server)
 
 
     def runServer(self) -> Task:
@@ -89,40 +78,40 @@ class Server:
         asyncio.run(self.startDownload(clinetIP,  fileName))
 
     async def startDownload(self, clinetIP: str, fileName: str):
+        logging.info(f"Starting download to: {clinetIP}, file: {fileName}")
         reader, writer = await asyncio.open_connection(clinetIP, 8888)
-        msg = Message(Msg.START_DOWNLOADING, Msg.NOT_APPLICABLE, fileName)
+        msg = Message(ActionCode.START_DOWNLOADING, StatusCode.NOT_APPLICABLE, None, fileName)
 
         await self.sendMessage(reader, writer, msg)
-        print("wating for return msg")
-        await self.receiveMessage(reader, writer) # get filename 
-        await self.saveFile(reader, writer, msg.details)
-        print("Close the connection")
+        logging.debug("wating for return msg")
+        msg = await self.receiveMessage(reader, writer) # get filename 
+        if msg.actionCode == ActionCode.CONFIRMATION and msg.status == StatusCode.ACCEPT:
+            await self.saveFile(reader, writer, msg)
+        logging.info("Close the connection")
         writer.close()
 
 
     async def sendMessage(self, reader: StreamReader, writer: StreamWriter, msg: Message):
-        print(f'Sending Message')
-        msg.show_message()
+        logging.debug(f'Sending Message: {msg}')
         data = msg.message_to_bytes()
-        print(data)
+        logging.debug(f"Message data bytes {data}")
         writer.write(data)
         await  writer.drain()
-        print(f'Sent')
+        logging.debug(f'Sent')
 
     async def sendFile(self, reader: StreamReader, writer: StreamWriter, fileName: str):
-        print(f'Started reading file for file: {fileName}')
-        # if fileName == 'test':
-        #     with open('testFile.test', "rb") as f:
-        #         data = f.read()
-        # else:
+        logging.debug(f'Started reading file for file: {fileName}')
         data = self.fp.read_file(fileName)
-        await self.send(reader, writer, data)
+        upload_task = asyncio.create_task(self.send(reader, writer, data))
+        logging.debug("Task created")
+        self.running_tasks[fileName] = upload_task
+        await upload_task
+        logging.debug("Task awaited")
+        del self.running_tasks[fileName]
 
     async def send(self, reader: StreamReader, writer: StreamWriter, data: bytes):
-        print(f'Sending: {len(data)}')
+        logging.info(f'Sending: {len(data)}')
         writer.write(data)
         await  writer.drain()
 
-        print('File message')
-
-
+        logging.debug('Data sent')

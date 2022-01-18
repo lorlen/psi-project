@@ -1,10 +1,12 @@
 import atexit
 from hashlib import sha256
+from ipaddress import IPv4Address, IPv6Address
 import os
 from pathlib import Path
 import shutil
 import sqlite3
-from typing import Optional
+from typing import Optional, Union
+import logging
 
 from psi_project.core import config
 from psi_project.core.utils import Singleton
@@ -48,42 +50,54 @@ class FileManager(metaclass=Singleton):
         if names_to_remove:
             self.db.execute(f"DELETE FROM metadata WHERE name IN ({names_to_remove})")
             self.db.commit()
+        
+        logging.info("Repo created")
 
     def add_file(
         self,
         path: Path,
         name: Optional[str] = None,
-        owner_address: Optional[str] = None,
+        owner_address: Optional[Union[str, IPv4Address, IPv6Address]] = None,
     ):
-        print(name)
+        logging.debug(f"starting adding file: name: {name}, path: {path}")
         name = self._sanitize_name(name) or path.name
 
         if (config.FILE_DIR / name).exists():
             raise ValueError("File already exists in the repository")
 
+        logging.debug(f"starting coping: name: {name}, path: {path}")
+
         shutil.copy(path, config.FILE_DIR / name)
         self.db.execute(
             "INSERT INTO metadata VALUES (?,?,?)",
-            (name, sha256(path.read_bytes()).hexdigest(), owner_address),
+            (name, sha256(path.read_bytes()).hexdigest(), str(owner_address) if owner_address else None),
         )
         self.db.commit()
 
+        logging.info(f"File added: name: {name}, path: {path}")
+
     def retrieve_file(self, name: str, path: Path):
+        logging.debug(f"starting retrieving file: name: {name}, path: {path}")
         name = self._sanitize_name(name)
 
         if path.is_dir():
             path /= name
+            logging.debug(f"Path: {path} was a dir")
 
         if not (config.FILE_DIR / name).exists():
             raise ValueError("File does not exist in the repository")
 
         shutil.copy(config.FILE_DIR / name, path)
 
+        logging.info(f"File retrieved: name: {name}, path: {path}")
+
     def remove_file(self, name: str):
+        logging.debug(f"Starting removed: name: {name}")
         name = self._sanitize_name(name)
         (config.FILE_DIR / name).unlink(missing_ok=True)
         self.db.execute("DELETE FROM metadata WHERE name = ?", (name,))
         self.db.commit()
+        logging.info(f"File removed: name: {name}")
 
     def open_file(self, name: str):
         return (config.FILE_DIR / self._sanitize_name(name)).open()

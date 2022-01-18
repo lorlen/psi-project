@@ -1,14 +1,16 @@
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
 from typing import Optional
+import logging
 
 from psi_project.repo import FileManager
-from psi_project.tcp import Server
+from psi_project.tcp import TcpServer
+from psi_project.udp import UdpServer
 
 
 class Commands:
     def __init__(
-        self, manager: FileManager, tcp_server: Server, udp_server=None
+        self, manager: FileManager, tcp_server: TcpServer, udp_server: UdpServer
     ) -> None:
         self.mgr = manager
         self.tcp = tcp_server
@@ -21,14 +23,13 @@ class Commands:
             self.mgr.retrieve_file(filename, path)
             return
 
-        # TODO: move this section to fetch() and call fetch() from here
-        await self.udp.findFile(filename)
-        # tcp download
-        # await self.tcp.startDownload("127.0.0.1", filename)
+        addr = await self.udp.findFile(filename)
 
-        # ======
-
-        writer.write(f"File {filename} does not exist\n".encode())
+        if addr:
+            await self.tcp.startDownload(addr, filename)
+            self.mgr.retrieve_file(filename, path)
+        else:
+            writer.write(f"File {filename} does not exist".encode())
 
     async def put(
         self,
@@ -60,9 +61,12 @@ class Commands:
             writer.write(f"File {filename} exists in the local repository\n".encode())
             return
 
-        # TODO: ask the network whether the file exists
+        addr = await self.udp.findFile(filename)
 
-        writer.write(f"File {filename} does not exist\n".encode())
+        if addr:
+            writer.write(f"File {filename} exists on host {addr}\n".encode())
+        else:
+            writer.write(f"File {filename} does not exist\n".encode())
 
     async def rm(
         self,
@@ -75,8 +79,18 @@ class Commands:
             writer.write(f"File {filename} does not exist\n".encode())
             return
 
+        if revoke:
+            await self.udp.revokeFile(filename)
+
         self.mgr.remove_file(filename)
 
     async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
-        # TODO: download the file from the network
-        raise NotImplementedError()
+        addr = await self.udp.findFile(filename)
+
+        if addr:
+            await self.tcp.startDownload(addr, filename)
+            writer.write(f"Successfully fetched file {filename}\n".encode())
+        else:
+            writer.write(f"File {filename} does not exist\n".encode())
+
+        
