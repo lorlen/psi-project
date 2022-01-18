@@ -1,6 +1,7 @@
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
 from typing import Optional
+import logging
 
 from psi_project.repo import FileManager
 from psi_project.tcp import TcpServer

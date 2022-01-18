@@ -56,6 +56,13 @@ class Message:
         print('detailsLength: {}'.format(self.detailsLength))
         print('details: {}\n'.format(self.details))    
     
+    def __str__(self) -> str:
+        return "".join('actionCode: {}\n'.format(self.actionCode.name),
+        'status: {}\n'.format(self.status.name),
+        'owner_address: {}\n'.format(self.owner_address),
+        'detailsLength: {}\n'.format(self.detailsLength),
+        'details: {}\n'.format(self.details))    
+
     def message_to_bytes(self):
         return self.struct_def.pack(
             self.actionCode.value,

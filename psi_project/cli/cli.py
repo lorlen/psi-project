@@ -6,7 +6,7 @@ from typing import List
 from psi_project.tcp import TcpServer
 from psi_project.udp import UdpServer
 from psi_project.repo import FileManager
-
+import logging
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
 
@@ -60,6 +60,7 @@ def make_cli(commands: Commands, streams=None):
         "fetch": (commands.fetch, fetch_parser),
     }
 
+    logging.debug("Starting cli")
     return AsynchronousCli(cmds, streams, prog="PSI Project")
 
 
@@ -76,6 +77,7 @@ def parse_args(args: List[str] = None):
 
 
 async def cli_main(args: List[str] = None):
+    logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
     serve_cli = parse_args(args)
     fp = FileManager()
     tcp = TcpServer(fp)
@@ -92,7 +94,11 @@ async def cli_main(args: List[str] = None):
     else:
         cli_task = asyncio.create_task(make_cli(commands).interact())
 
+    logging.info("Cli started")
+
     tcp_task = tcp.runServer()
     udp_task = udp.runServer()
 
     await asyncio.gather(cli_task, tcp_task, udp_task, return_exceptions=True)
+
+    logging.info("Shuting down")
