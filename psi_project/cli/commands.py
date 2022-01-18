@@ -92,5 +92,3 @@ class Commands:
             writer.write(f"Successfully fetched file {filename}\n".encode())
         else:
             writer.write(f"File {filename} does not exist\n".encode())
-
-        

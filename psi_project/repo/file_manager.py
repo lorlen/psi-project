@@ -50,7 +50,7 @@ class FileManager(metaclass=Singleton):
         if names_to_remove:
             self.db.execute(f"DELETE FROM metadata WHERE name IN ({names_to_remove})")
             self.db.commit()
-        
+
         logging.info("Repo created")
 
     def add_file(
@@ -70,7 +70,11 @@ class FileManager(metaclass=Singleton):
         shutil.copy(path, config.FILE_DIR / name)
         self.db.execute(
             "INSERT INTO metadata VALUES (?,?,?)",
-            (name, sha256(path.read_bytes()).hexdigest(), str(owner_address) if owner_address else None),
+            (
+                name,
+                sha256(path.read_bytes()).hexdigest(),
+                str(owner_address) if owner_address else None,
+            ),
         )
         self.db.commit()
 
