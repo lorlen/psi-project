@@ -1,1 +1,1 @@
-from .UdpServer import UdpServer, serveUdpServer
+from .UdpServer import UdpServer, serve_udp_server

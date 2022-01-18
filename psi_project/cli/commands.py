@@ -23,10 +23,10 @@ class Commands:
             self.mgr.retrieve_file(filename, path)
             return
 
-        addr = await self.udp.findFile(filename)
+        addr = await self.udp.find_file(filename)
 
         if addr:
-            await self.tcp.startDownload(addr, filename)
+            await self.tcp.start_download(addr, filename)
             self.mgr.retrieve_file(filename, path)
         else:
             writer.write(f"File {filename} does not exist".encode())
@@ -61,7 +61,7 @@ class Commands:
             writer.write(f"File {filename} exists in the local repository\n".encode())
             return
 
-        addr = await self.udp.findFile(filename)
+        addr = await self.udp.find_file(filename)
 
         if addr:
             writer.write(f"File {filename} exists on host {addr}\n".encode())
@@ -80,15 +80,15 @@ class Commands:
             return
 
         if revoke:
-            await self.udp.revokeFile(filename)
+            await self.udp.revoke_file(filename)
 
         self.mgr.remove_file(filename)
 
     async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
-        addr = await self.udp.findFile(filename)
+        addr = await self.udp.find_file(filename)
 
         if addr:
-            await self.tcp.startDownload(addr, filename)
+            await self.tcp.start_download(addr, filename)
             writer.write(f"Successfully fetched file {filename}\n".encode())
         else:
             writer.write(f"File {filename} does not exist\n".encode())

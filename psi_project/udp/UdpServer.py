@@ -48,13 +48,13 @@ class UdpServer:
             if message.details in self.tcp.running_tasks:
                 logging.debug(f"Adding revoked callback to future: {message.details}")
                 self.tcp.running_tasks[message.details].add_done_callback(
-                    self._revokedCallback(message)
+                    lambda _: self._revoked_callback(message)
                 )
             else:
                 logging.debug(f"Removing file: {message.details}")
                 self.fp.remove_file(message.details)
 
-    def _revokedCallback(self, message: Message):
+    def _revoked_callback(self, message: Message):
         logging.info(f"Future done, removing file: {message.details}")
         self.fp.remove_file(message.details)
 
@@ -71,7 +71,7 @@ class UdpServer:
             logging.info(f"Sending return message {answer} to {addr}")
             self.transport.sendto(answer.message_to_bytes(), addr)
 
-    async def findFile(self, filename, timeout: int = 10):
+    async def find_file(self, filename, timeout: int = 10):
         logging.info(f"Finding file: {filename}")
 
         future = asyncio.get_event_loop().create_future()
@@ -91,7 +91,7 @@ class UdpServer:
         finally:
             del self.file_exists_futures[filename]
 
-    async def revokeFile(self, filename):
+    async def revoke_file(self, filename):
         logging.info(f"Revoking file: {filename}")
         message = Message(ActionCode.REVOKE, StatusCode.NOT_APPLICABLE, None, filename)
         self.transport.sendto(message.message_to_bytes(), ("<broadcast>", 9000))
@@ -111,7 +111,7 @@ class UdpProtocol(asyncio.DatagramProtocol):
         self.server.datagram_received(data, addr)
 
 
-async def serveUdpServer(server: UdpServer):
+async def serve_udp_server(server: UdpServer):
     loop = asyncio.get_event_loop()
     transport, protocol = await loop.create_datagram_endpoint(
         lambda: UdpProtocol(server), local_addr=("0.0.0.0", 9000)
