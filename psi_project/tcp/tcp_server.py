@@ -8,7 +8,7 @@ import logging
 
 from psi_project.core.message import ActionCode, StatusCode, Message
 from psi_project.repo import FileManager
-
+from psi_project.core import config
 
 class TcpServer:
     def __init__(self, fp: FileManager):
@@ -70,7 +70,7 @@ class TcpServer:
         self.fp.add_file(Path(fp.name), name=msg.details, owner_address=owner_addr)
 
     async def serve_server(self):
-        server = await asyncio.start_server(self.handle, "0.0.0.0", 8888)
+        server = await asyncio.start_server(self.handle, "0.0.0.0", config.TCP_PORT)
 
         addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
         logging.info(f"Serving on {addrs}")
@@ -86,7 +86,7 @@ class TcpServer:
 
     async def start_download(self, server_ip: str, filename: str):
         logging.info(f"Starting download to: {server_ip}, file: {filename}")
-        reader, writer = await asyncio.open_connection(server_ip, 8888)
+        reader, writer = await asyncio.open_connection(server_ip, config.TCP_PORT)
         msg = Message(
             ActionCode.START_DOWNLOADING, StatusCode.NOT_APPLICABLE, None, filename
         )
