@@ -104,8 +104,8 @@ class Commands:
         try: 
             await func()
         except ConnectionRefusedError as e:
-            writer.write(f"Could not connect to host, other host could end work.\n If you see this error again please check your network")
+            writer.write(f"Could not connect to host, other host could end work.\n If you see this error again please check your network\n")
         except ConnectionResetError as e:
-            writer.write(f"Connection was reset on the remote host, could not connect")
+            writer.write(f"Connection was reset on the remote host, could not connect\n")
         except ConnectionAbortedError as e:
-            writer.write(f"Connection was aborted by remote host")
+            writer.write(f"Connection was aborted by remote host\n")
