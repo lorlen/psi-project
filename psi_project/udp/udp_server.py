@@ -12,13 +12,13 @@ class UdpServer:
     def __init__(self, fp: FileManager, tcp: TcpServer):
         self.fp = fp
         self.tcp = tcp
-        self.file_exists_futures: Dict[str, asyncio.Future] = {}
+        self.file_avail_futures: Dict[str, asyncio.Future] = {}
         logging.info("started UDP Server")
 
     def handle(self, message: Message, addr):
         logging.info(f"Received {message} from {addr}")
         if message.actionCode == ActionCode.ASK_IF_FILE_EXISTS:
-            if self.fp.file_exists(message.details):
+            if self.fp.file_available(message.details):
                 owner_addr = self.fp.get_file_metadata(message.details)["owner_address"]
                 logging.debug(f"File exists returning metadata {owner_addr}")
                 return Message(
@@ -39,26 +39,28 @@ class UdpServer:
         elif message.actionCode == ActionCode.ANSWER_FILE_EXISTS:
             if (
                 message.status == StatusCode.FILE_EXISTS
-                and message.details in self.file_exists_futures
+                and message.details in self.file_avail_futures
             ):
                 logging.debug(f"Finishing future {message.details}")
-                self.file_exists_futures[message.details].set_result(addr[0])
+                self.file_avail_futures[message.details].set_result(addr[0])
 
         elif message.actionCode == ActionCode.REVOKE:
             meta = self.fp.get_file_metadata(message.details)
             if meta and meta["owner_address"] == addr[0]:
                 if message.details in self.tcp.running_tasks:
-                    logging.debug(f"Adding revoked callback to future: {message.details}")
+                    logging.debug(
+                        f"Adding revoked callback to future: {message.details}"
+                    )
                     self.tcp.running_tasks[message.details].add_done_callback(
                         lambda _: self._revoked_callback(message)
                     )
                 else:
                     logging.debug(f"Removing file: {message.details}")
-                    self.fp.remove_file(message.details)
+                    self.fp.revoke_file(message.details)
 
     def _revoked_callback(self, message: Message):
         logging.info(f"Future done, removing file: {message.details}")
-        self.fp.remove_file(message.details)
+        self.fp.revoke_file(message.details)
 
     def datagram_received(self, data, addr):
         logging.info(f"Received datagram: {data} from {addr}")
@@ -77,7 +79,7 @@ class UdpServer:
         logging.info(f"Finding file: {filename}")
 
         future = asyncio.get_event_loop().create_future()
-        self.file_exists_futures[filename] = future
+        self.file_avail_futures[filename] = future
 
         message = Message(
             ActionCode.ASK_IF_FILE_EXISTS, StatusCode.NOT_APPLICABLE, None, filename
@@ -91,7 +93,7 @@ class UdpServer:
         except asyncio.TimeoutError:
             return None
         finally:
-            del self.file_exists_futures[filename]
+            del self.file_avail_futures[filename]
 
     async def revoke_file(self, filename):
         logging.info(f"Revoking file: {filename}")

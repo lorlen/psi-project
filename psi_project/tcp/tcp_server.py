@@ -29,7 +29,7 @@ class TcpServer:
                 ActionCode.CONFIRMATION, StatusCode.BAD_REQUEST, None, "BAD ACTION"
             )
             await self.send_message(reader, writer, returnMsg)
-        elif self.fp.file_exists(msg.details):
+        elif self.fp.file_available(msg.details):
             logging.info(f"Sending file to  {addr!r}")
             addr = self.fp.get_file_metadata(msg.details)["owner_address"]
             returnMsg = Message(
@@ -67,9 +67,7 @@ class TcpServer:
         with tempfile.NamedTemporaryFile(delete=False) as fp:
             fp.write(data)
 
-        self.fp.add_file(
-            Path(fp.name), name=msg.details, owner_address=owner_addr
-        )
+        self.fp.add_file(Path(fp.name), name=msg.details, owner_address=owner_addr)
 
     async def serve_server(self):
         server = await asyncio.start_server(self.handle, "0.0.0.0", 8888)
@@ -114,7 +112,9 @@ class TcpServer:
         await writer.drain()
         logging.debug(f"Sent")
 
-    async def send_file(self, reader: StreamReader, writer: StreamWriter, filename: str):
+    async def send_file(
+        self, reader: StreamReader, writer: StreamWriter, filename: str
+    ):
         logging.debug(f"Started reading file for file: {filename}")
         data = self.fp.read_file(filename)
         upload_task = asyncio.create_task(self.send(reader, writer, data))

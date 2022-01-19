@@ -26,7 +26,9 @@ class FileManager(metaclass=Singleton):
             CREATE TABLE IF NOT EXISTS metadata (
                 name TEXT PRIMARY KEY,
                 hash TEXT NOT NULL,
-                owner_address TEXT
+                owner_address TEXT,
+                revoked INTEGER NOT NULL DEFAULT 0
+                CHECK(revoked IN (0, 1))
             );
 
             CREATE INDEX IF NOT EXISTS metadata_hash_idx ON metadata(hash);
@@ -69,11 +71,12 @@ class FileManager(metaclass=Singleton):
 
         shutil.copy(path, config.FILE_DIR / name)
         self.db.execute(
-            "INSERT INTO metadata VALUES (?,?,?)",
+            "INSERT INTO metadata VALUES (?,?,?,?)",
             (
                 name,
                 sha256(path.read_bytes()).hexdigest(),
                 str(owner_address) if owner_address else None,
+                0,
             ),
         )
         self.db.commit()
@@ -103,6 +106,14 @@ class FileManager(metaclass=Singleton):
         self.db.commit()
         logging.info(f"File removed: name: {name}")
 
+    def revoke_file(self, name: str):
+        logging.debug(f"Revoking file {name}")
+        self.db.execute(
+            "UPDATE metadata SET revoked = 1 WHERE name = ?",
+            (self._sanitize_name(name),),
+        )
+        self.db.commit()
+
     def open_file(self, name: str):
         return (config.FILE_DIR / self._sanitize_name(name)).open()
 
@@ -121,6 +132,14 @@ class FileManager(metaclass=Singleton):
         return (
             self.db.execute(
                 "SELECT count(*) FROM metadata WHERE name = ?", (name,)
+            ).fetchone()[0]
+            == 1
+        )
+
+    def file_available(self, name: str):
+        return (
+            self.db.execute(
+                "SELECT count(*) FROM metadata WHERE name = ? AND NOT revoked", (name,)
             ).fetchone()[0]
             == 1
         )

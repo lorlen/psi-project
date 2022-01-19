@@ -44,6 +44,10 @@ class Commands:
             )
             return
 
+        if not path.is_file():
+            writer.write(f"Filesystem path {path} is not an existing file\n".encode())
+            return
+
         self.mgr.add_file(path, filename)
         writer.write(
             f"Successfully added file {filename or path.name} to the repository\n".encode()
@@ -51,8 +55,10 @@ class Commands:
 
     async def ls(self, reader: StreamReader, writer: StreamWriter):
         for row in self.mgr.list_files():
-            text = row["name"] + (
-                f" (Owner: {row['owner_address']})" if row["owner_address"] else ""
+            text = (
+                row["name"]
+                + (f" (Owner: {row['owner_address']})" if row["owner_address"] else "")
+                + (" (Revoked)" if row["revoked"] == 1 else "")
             )
             writer.write((text + "\n").encode())
 
@@ -68,21 +74,16 @@ class Commands:
         else:
             writer.write(f"File {filename} does not exist\n".encode())
 
-    async def rm(
-        self,
-        reader: StreamReader,
-        writer: StreamWriter,
-        filename: str,
-        revoke: bool = False,
-    ):
+    async def rm(self, reader: StreamReader, writer: StreamWriter, filename: str):
         if not self.mgr.file_exists(filename):
             writer.write(f"File {filename} does not exist\n".encode())
             return
 
-        if revoke:
-            await self.udp.revoke_file(filename)
-
         self.mgr.remove_file(filename)
+
+    async def revoke(self, reader: StreamReader, writer: StreamWriter, filename: str):
+        await self.udp.revoke_file(filename)
+        self.mgr.revoke_file(filename)
 
     async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
         addr = await self.udp.find_file(filename)
