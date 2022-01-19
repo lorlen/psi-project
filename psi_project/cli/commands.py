@@ -1,6 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 import logging
 
 from psi_project.repo import FileManager
@@ -23,13 +23,17 @@ class Commands:
             self.mgr.retrieve_file(filename, path)
             return
 
-        addr = await self.udp.find_file(filename)
 
-        if addr:
-            await self.tcp.start_download(addr, filename)
-            self.mgr.retrieve_file(filename, path)
-        else:
-            writer.write(f"File {filename} does not exist".encode())
+        async def do_get():
+            addr = await self.udp.find_file(filename)
+
+            if addr:
+                await self.tcp.start_download(addr, filename)
+                self.mgr.retrieve_file(filename, path)
+            else:
+                writer.write(f"File {filename} does not exist".encode())
+
+        await self.try_to_connect(reader, writer, do_get)
 
     async def put(
         self,
@@ -87,8 +91,21 @@ class Commands:
     async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
         addr = await self.udp.find_file(filename)
 
-        if addr:
-            await self.tcp.start_download(addr, filename)
-            writer.write(f"Successfully fetched file {filename}\n".encode())
-        else:
-            writer.write(f"File {filename} does not exist\n".encode())
+        async def do_fetch():
+            if addr:
+                await self.tcp.start_download(addr, filename)
+                writer.write(f"Successfully fetched file {filename}\n".encode())
+            else:
+                writer.write(f"File {filename} does not exist\n".encode())
+
+        await self.try_to_connect(reader, writer, do_fetch)
+
+    async def try_to_connect(self, reader: StreamReader, writer: StreamWriter, func: Callable):
+        try: 
+            await func()
+        except ConnectionRefusedError as e:
+            writer.write(f"Could not connect to host, other host could end work.\n If you see this error again please check your network")
+        except ConnectionResetError as e:
+            writer.write(f"Connection was reset on the remote host, could not connect")
+        except ConnectionAbortedError as e:
+            writer.write(f"Connection was aborted by remote host")

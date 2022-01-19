@@ -7,7 +7,7 @@ from psi_project.core.message import ActionCode, StatusCode, Message
 from psi_project.repo import FileManager
 from psi_project.tcp import TcpServer
 
-
+from psi_project.core import config
 class UdpServer:
     def __init__(self, fp: FileManager, tcp: TcpServer):
         self.fp = fp
@@ -84,7 +84,7 @@ class UdpServer:
         )
 
         logging.debug(f"Created future and returning message: {message}")
-        self.transport.sendto(message.message_to_bytes(), ("<broadcast>", 9000))
+        self.transport.sendto(message.message_to_bytes(), ("<broadcast>", config.UDP_PORT))
 
         try:
             return await asyncio.wait_for(future, timeout)
@@ -96,7 +96,7 @@ class UdpServer:
     async def revoke_file(self, filename):
         logging.info(f"Revoking file: {filename}")
         message = Message(ActionCode.REVOKE, StatusCode.NOT_APPLICABLE, None, filename)
-        self.transport.sendto(message.message_to_bytes(), ("<broadcast>", 9000))
+        self.transport.sendto(message.message_to_bytes(), ("<broadcast>", config.UDP_PORT))
 
 
 class UdpProtocol(asyncio.DatagramProtocol):
@@ -116,7 +116,7 @@ class UdpProtocol(asyncio.DatagramProtocol):
 async def serve_udp_server(server: UdpServer):
     loop = asyncio.get_event_loop()
     transport, protocol = await loop.create_datagram_endpoint(
-        lambda: UdpProtocol(server), local_addr=("0.0.0.0", 9000)
+        lambda: UdpProtocol(server), local_addr=("0.0.0.0", config.UDP_PORT)
     )
 
     server.transport = transport
