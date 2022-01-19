@@ -45,14 +45,16 @@ class UdpServer:
                 self.file_exists_futures[message.details].set_result(addr[0])
 
         elif message.actionCode == ActionCode.REVOKE:
-            if message.details in self.tcp.running_tasks:
-                logging.debug(f"Adding revoked callback to future: {message.details}")
-                self.tcp.running_tasks[message.details].add_done_callback(
-                    lambda _: self._revoked_callback(message)
-                )
-            else:
-                logging.debug(f"Removing file: {message.details}")
-                self.fp.remove_file(message.details)
+            meta = self.fp.get_file_metadata(message.details)
+            if meta and meta["owner_address"] == addr[0]:
+                if message.details in self.tcp.running_tasks:
+                    logging.debug(f"Adding revoked callback to future: {message.details}")
+                    self.tcp.running_tasks[message.details].add_done_callback(
+                        lambda _: self._revoked_callback(message)
+                    )
+                else:
+                    logging.debug(f"Removing file: {message.details}")
+                    self.fp.remove_file(message.details)
 
     def _revoked_callback(self, message: Message):
         logging.info(f"Future done, removing file: {message.details}")
