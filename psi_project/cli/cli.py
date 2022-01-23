@@ -6,8 +6,9 @@ import logging
 from pathlib import Path
 from typing import List
 from psi_project.tcp import TcpServer
-from psi_project.udp import UdpServer, serveUdpServer
+from psi_project.udp import UdpServer, serve_udp_server
 from psi_project.repo import FileManager
+from psi_project.core import config
 
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
@@ -43,12 +44,11 @@ def make_cli(commands: Commands, streams=None):
 
     rm_parser = ArgumentParser(description="Remove a file from the local repository.")
     rm_parser.add_argument("filename", help="file to remove")
-    rm_parser.add_argument(
-        "-r",
-        "--revoke",
-        action="store_true",
-        help="also revoke this file on remote nodes",
+
+    revoke_parser = ArgumentParser(
+        description="Revoke a file, causing it to stop being broadcasted from other nodes."
     )
+    revoke_parser.add_argument("filename", help="file to be revoked")
 
     fetch_parser = ArgumentParser(description="Fetch a file to local repository.")
     fetch_parser.add_argument("filename", help="file to fetch")
@@ -59,6 +59,7 @@ def make_cli(commands: Commands, streams=None):
         "ls": (commands.ls, ls_parser),
         "exists": (commands.exists, exists_parser),
         "rm": (commands.rm, rm_parser),
+        "revoke": (commands.revoke, revoke_parser),
         "fetch": (commands.fetch, fetch_parser),
     }
 
@@ -80,11 +81,11 @@ def parse_args(args: List[str] = None):
 
 async def cli_main(args: List[str] = None):
     logging.basicConfig(
-        filename="psi-project.log",
+        filename=config.LOG_FILE,
         filemode="a",
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+        format=config.LOG_FORMAT,
         encoding="utf-8",
-        level=logging.DEBUG,
+        level=config.LOG_LEVEL,
     )
     atexit.register(lambda: logging.info("Exiting the program\n"))
 
@@ -106,8 +107,8 @@ async def cli_main(args: List[str] = None):
 
     logging.info("Cli started")
 
-    tcp_task = tcp.runServer()
-    udp_task = asyncio.create_task(serveUdpServer(udp))
+    tcp_task = tcp.run_server()
+    udp_task = asyncio.create_task(serve_udp_server(udp))
 
     await asyncio.gather(cli_task, tcp_task, udp_task, return_exceptions=True)
 

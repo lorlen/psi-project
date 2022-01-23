@@ -49,9 +49,9 @@ class Message:
         if isinstance(owner_address, str):
             self.owner_address = ip_address(owner_address)
 
-        if isinstance(owner_address, IPv4Address):
+        if isinstance(self.owner_address, IPv4Address):
             self.address_kind = IPAddrKind.IPv4
-        elif isinstance(owner_address, IPv6Address):
+        elif isinstance(self.owner_address, IPv6Address):
             self.address_kind = IPAddrKind.IPv6
 
     def __str__(self) -> str:

@@ -1,6 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 import logging
 
 from psi_project.repo import FileManager
@@ -23,13 +23,17 @@ class Commands:
             self.mgr.retrieve_file(filename, path)
             return
 
-        addr = await self.udp.findFile(filename)
 
-        if addr:
-            await self.tcp.startDownload(addr, filename)
-            self.mgr.retrieve_file(filename, path)
-        else:
-            writer.write(f"File {filename} does not exist".encode())
+        async def do_get():
+            addr = await self.udp.find_file(filename)
+
+            if addr:
+                await self.tcp.start_download(addr, filename)
+                self.mgr.retrieve_file(filename, path)
+            else:
+                writer.write(f"File {filename} does not exist".encode())
+
+        await self.try_to_connect(reader, writer, do_get)
 
     async def put(
         self,
@@ -44,6 +48,10 @@ class Commands:
             )
             return
 
+        if not path.is_file():
+            writer.write(f"Filesystem path {path} is not an existing file\n".encode())
+            return
+
         self.mgr.add_file(path, filename)
         writer.write(
             f"Successfully added file {filename or path.name} to the repository\n".encode()
@@ -51,8 +59,10 @@ class Commands:
 
     async def ls(self, reader: StreamReader, writer: StreamWriter):
         for row in self.mgr.list_files():
-            text = row["name"] + (
-                f" (Owner: {row['owner_address']})" if row["owner_address"] else ""
+            text = (
+                row["name"]
+                + (f" (Owner: {row['owner_address']})" if row["owner_address"] else "")
+                + (" (Revoked)" if row["revoked"] == 1 else "")
             )
             writer.write((text + "\n").encode())
 
@@ -61,34 +71,42 @@ class Commands:
             writer.write(f"File {filename} exists in the local repository\n".encode())
             return
 
-        addr = await self.udp.findFile(filename)
+        addr = await self.udp.find_file(filename)
 
         if addr:
             writer.write(f"File {filename} exists on host {addr}\n".encode())
         else:
             writer.write(f"File {filename} does not exist\n".encode())
 
-    async def rm(
-        self,
-        reader: StreamReader,
-        writer: StreamWriter,
-        filename: str,
-        revoke: bool = False,
-    ):
+    async def rm(self, reader: StreamReader, writer: StreamWriter, filename: str):
         if not self.mgr.file_exists(filename):
             writer.write(f"File {filename} does not exist\n".encode())
             return
 
-        if revoke:
-            await self.udp.revokeFile(filename)
-
         self.mgr.remove_file(filename)
 
-    async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
-        addr = await self.udp.findFile(filename)
+    async def revoke(self, reader: StreamReader, writer: StreamWriter, filename: str):
+        await self.udp.revoke_file(filename)
+        self.mgr.revoke_file(filename)
 
-        if addr:
-            await self.tcp.startDownload(addr, filename)
-            writer.write(f"Successfully fetched file {filename}\n".encode())
-        else:
-            writer.write(f"File {filename} does not exist\n".encode())
+    async def fetch(self, reader: StreamReader, writer: StreamWriter, filename: str):
+        addr = await self.udp.find_file(filename)
+
+        async def do_fetch():
+            if addr:
+                await self.tcp.start_download(addr, filename)
+                writer.write(f"Successfully fetched file {filename}\n".encode())
+            else:
+                writer.write(f"File {filename} does not exist\n".encode())
+
+        await self.try_to_connect(reader, writer, do_fetch)
+
+    async def try_to_connect(self, reader: StreamReader, writer: StreamWriter, func: Callable):
+        try: 
+            await func()
+        except ConnectionRefusedError as e:
+            writer.write(f"Could not connect to host, other host could end work.\n If you see this error again please check your network\n")
+        except ConnectionResetError as e:
+            writer.write(f"Connection was reset on the remote host, could not connect\n")
+        except ConnectionAbortedError as e:
+            writer.write(f"Connection was aborted by remote host\n")
