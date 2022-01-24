@@ -84,7 +84,6 @@ async def cli_main(args: List[str] = None):
         filename=config.LOG_FILE,
         filemode="a",
         format=config.LOG_FORMAT,
-        encoding="utf-8",
         level=config.LOG_LEVEL,
     )
     atexit.register(lambda: logging.info("Exiting the program\n"))
