@@ -5,14 +5,15 @@ from functools import partial
 import logging
 from pathlib import Path
 from typing import List
-from psi_project.tcp import TcpServer
-from psi_project.udp import UdpServer, serve_udp_server
-from psi_project.repo import FileManager
-from psi_project.core import config
 
 from aioconsole import AsynchronousCli, start_interactive_server
 from aioconsole.server import parse_server, print_server
 
+from ..core import config
+from ..core.utils import task_proxy
+from ..repo import FileManager
+from ..tcp import TcpServer
+from ..udp import UdpServer, serve_udp_server
 from .commands import Commands
 
 
@@ -60,7 +61,7 @@ def make_cli(commands: Commands, streams=None):
         "exists": (commands.exists, exists_parser),
         "rm": (commands.rm, rm_parser),
         "revoke": (commands.revoke, revoke_parser),
-        "fetch": (commands.fetch, fetch_parser),
+        "fetch": (task_proxy(commands.fetch), fetch_parser),
     }
 
     logging.debug("Starting cli")
